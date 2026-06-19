@@ -1,0 +1,37 @@
+# Quartus compilation database (regenerated on every compile)
+db/
+incremental_db/
+
+# Compilation outputs (regenerated on every compile)
+output_files/
+
+# Temporary files
+greybox_tmp/
+
+# Simulation output
+simulation/
+
+# PLL simulation files (not needed for Quartus synthesis)
+src/pll/*_sim/
+src/pll/*_sim.f
+
+# Quartus backup files
+*.bak
+
+# Workspace / window layout
+*.qws
+
+# IP regeneration reports
+*.ipregen.rpt
+pll_25.xml
+pll_5.xml
+
+# Auto-generated SDC / pin files
+*.out.sdc
+*_PinBackup.csv
+
+# Auto-generated pin defaults
+*_assignment_defaults.qdf
+
+# Project instructions (local only)
+CLAUDE.md
