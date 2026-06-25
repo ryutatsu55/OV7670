@@ -1,5 +1,6 @@
 `include "adv7513/adv7513.v"
 `include "camera/camera.v"
+`include "difference/difference.v"
 
 // Top-level module.
 // IP cores (pll_25, pll_5, bram_2port) are added via their .qip files.
@@ -53,6 +54,10 @@ module TopModule (
     output wire        CAM_INIT_DONE,  // SCCB 初期化完了で HIGH
     output wire        CAM_PCLK_ACT   // PCLK 受信中に点灯
 );
+
+wire [18:0] diff_addr;
+wire [7:0]  diff_data;
+wire        diff_we;
 
 wire clock25;
 wire clock5;
@@ -108,14 +113,27 @@ camera u_camera (
     .pclk_active (CAM_PCLK_ACT)
 );
 
+frame_difference u_frame_difference (
+    .clock        (CAM_PCLK),
+    .reset        (reset),
+
+    .current_addr (bram_addr_a),
+    .current_data (bram_wdata_a),
+    .current_we   (bram_we_a),
+
+    .diff_addr    (diff_addr),
+    .diff_data    (diff_data),
+    .diff_we      (diff_we)
+);
+
 // ---- BRAM（デュアルポート）-----------------------------------------
 // Port A: 書き込み（CAM_PCLK ~5 MHz） — camera/capture_gray
 // Port B: 読み出し（clock25）         — adv7513/PVI
 bram_2port bram_2port (
     .clock_a   (CAM_PCLK),
-    .address_a (bram_addr_a),
-    .data_a    (bram_wdata_a),
-    .wren_a    (bram_we_a),
+    .address_a (diff_addr),
+    .data_a    (diff_data),
+    .wren_a    (diff_we),
     .q_a       (),
 
     .clock_b   (clock25),
