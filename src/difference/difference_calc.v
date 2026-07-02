@@ -3,6 +3,7 @@ module difference_calc(
   input  wire        reset,
   
   input wire mode,
+  input wire mode2,
 
   input  wire [18:0] current_addr,
   input  wire [7:0]  current_data,
@@ -44,8 +45,12 @@ wire [7:0] abs_diff =
   (current_data_d2 - prev_rd_data) :
   (prev_rd_data - current_data_d2);
 
+wire [1:0] output_switch = {mode2, mode}; //mode2が2bit目　mode が1bit目
+
 wire [7:0] diff_pixel =
-  mode ? abs_diff : (8'd255 - abs_diff);
+    (output_switch == 2'b00) ? (8'd255 - abs_diff) : // 黒地
+    (output_switch == 2'b01) ? abs_diff :            // 白地
+                               current_data_d2;       // output_switch==2'b10：何も加工しない
 
 
 

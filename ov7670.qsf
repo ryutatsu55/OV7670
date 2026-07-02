@@ -63,7 +63,6 @@ set_location_assignment PIN_AF11 -to HDMI_TX_INT
 set_location_assignment PIN_W15 -to READY
 set_location_assignment PIN_Y24 -to switchR
 set_location_assignment PIN_W24 -to switchG
-set_location_assignment PIN_W21 -to switchB
 set_location_assignment PIN_AD12 -to HDMI_TX_D[0]
 set_location_assignment PIN_W8 -to HDMI_TX_D[2]
 set_location_assignment PIN_Y8 -to HDMI_TX_D[3]
@@ -175,4 +174,5 @@ set_instance_assignment -name IO_STANDARD "3.3-V LVCMOS" -to CAM_D[6]
 set_instance_assignment -name IO_STANDARD "3.3-V LVCMOS" -to CAM_D[7]
 set_instance_assignment -name IO_STANDARD "3.3-V LVCMOS" -to CAM_D
 set_location_assignment PIN_W20 -to mode
+set_location_assignment PIN_W21 -to mode2
 set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top

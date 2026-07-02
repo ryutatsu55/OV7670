@@ -20,6 +20,7 @@ module TopModule (
     input  wire        switchR, switchG, switchB,
 
     input  wire        mode, // 0:黒地 1:白地
+    input  wire     mode2,
 
     // AUDIO (unused)
     output wire        HDMI_I2S0,
@@ -146,6 +147,7 @@ frame_difference u_frame_difference (
     .clock        (CAM_PCLK),
     .reset        (reset),
     .mode         (mode),
+    .mode2        (mode2),
     .current_addr (bram_addr_a),
     .current_data (bram_wdata_a),
     .current_we   (bram_we_a),

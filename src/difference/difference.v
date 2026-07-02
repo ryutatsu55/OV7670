@@ -7,6 +7,7 @@ module frame_difference(
     input  wire        reset,
 
     input wire mode,
+    input wire mode2,
 
     input  wire [18:0] current_addr,
     input  wire [7:0]  current_data,
@@ -62,7 +63,8 @@ difference_calc u_diff(
     
     .write_phase(write_phase),
 
-    .mode(mode)
+    .mode(mode),
+    .mode2(mode2)
 
 );
 
