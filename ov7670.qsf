@@ -174,4 +174,5 @@ set_instance_assignment -name IO_STANDARD "3.3-V LVCMOS" -to CAM_D[5]
 set_instance_assignment -name IO_STANDARD "3.3-V LVCMOS" -to CAM_D[6]
 set_instance_assignment -name IO_STANDARD "3.3-V LVCMOS" -to CAM_D[7]
 set_instance_assignment -name IO_STANDARD "3.3-V LVCMOS" -to CAM_D
+set_location_assignment PIN_W20 -to mode
 set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top

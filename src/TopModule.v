@@ -19,6 +19,8 @@ module TopModule (
     input  wire        reset_n,
     input  wire        switchR, switchG, switchB,
 
+    input  wire        mode, // 0:黒地 1:白地
+
     // AUDIO (unused)
     output wire        HDMI_I2S0,
     output wire        HDMI_MCLK,
@@ -113,17 +115,50 @@ camera u_camera (
     .pclk_active (CAM_PCLK_ACT)
 );
 
+wire [31:0] center_x, center_y;
+
+
+wire f_dist;
+wire display_phase;
+reg display_phase_cam_d1;
+reg display_phase_cam_d2;
+
+wire write_phase;
+assign write_phase = ~f_dist;
+
+always @(posedge CAM_PCLK or posedge reset) begin
+  if (reset) begin
+    display_phase_cam_d1 <= 1'b0;
+    display_phase_cam_d2 <= 1'b0;
+  end else begin
+    display_phase_cam_d1 <= display_phase;
+    display_phase_cam_d2 <= display_phase_cam_d1;
+  end
+end
+
+//wire write_phase = ~display_phase_cam_d2;
+
+//wire write_phase;
+
+//assign write_phase = ~f_dist;
+
 frame_difference u_frame_difference (
     .clock        (CAM_PCLK),
     .reset        (reset),
-
+    .mode         (mode),
     .current_addr (bram_addr_a),
     .current_data (bram_wdata_a),
     .current_we   (bram_we_a),
 
     .diff_addr    (diff_addr),
     .diff_data    (diff_data),
-    .diff_we      (diff_we)
+    .diff_we      (diff_we),
+
+    .center_x     (center_x),
+    .center_y     (center_y),
+
+    .f_dist       (f_dist),
+    .write_phase (write_phase)
 );
 
 // ---- BRAM（デュアルポート）-----------------------------------------
@@ -166,7 +201,9 @@ adv7513 adv7513 (
     .HDMI_I2C_SCL (HDMI_I2C_SCL),
     .READY        (READY),
     .bram_addr    (bram_addr_b),
-    .bram_rdata   (bram_rdata_b)
+    .bram_rdata   (bram_rdata_b),
+    .f_dist       (f_dist),
+.display_phase(display_phase)
 );
 
 endmodule
