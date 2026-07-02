@@ -16,8 +16,9 @@ module frame_difference(
     output wire [7:0]  diff_data,
     output wire        diff_we,
 
-    output wire [31:0] center_x, 
-    output wire [31:0] center_y,
+    output wire [31:0] count,
+    output wire [31:0] sum_x,
+    output wire [31:0] sum_y,
 
     output wire f_dist, // 0: frame0 , 1: frame1
 
@@ -55,9 +56,10 @@ difference_calc u_diff(
     .diff_data(diff_data),
     .diff_we(diff_we),
 
-    .center_x(center_x),
-    .center_y(center_y),
-    
+    .count(count),
+    .sum_x(sum_x),
+    .sum_y(sum_y),
+
     .f_dist(f_dist),
     
     .write_phase(write_phase),

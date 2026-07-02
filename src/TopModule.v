@@ -2,7 +2,6 @@
 `include "camera/camera.v"
 `include "difference/difference.v"
 `include "hps_if/motion_cdc.v"
-`include "hps_if/motion_stats_stub.v"
 
 // Top-level module.
 // IP cores (pll_25, pll_5, bram_2port, soc_system) are added via their .qip files。
@@ -15,8 +14,8 @@
 //   ├── pll_25             — 50 MHz → 25.175 MHz pixel clock (Quartus IP)
 //   ├── pll_5              — 50 MHz → 25 MHz OV7670 XCLK     (Quartus IP)
 //   ├── camera             — OV7670 camera subsystem (SCCB init + YUV422 capture)
-//   ├── frame_difference   — 前フレームとの絶対差分計算 (CAM_PCLK ドメイン)
-//   ├── (motion_stats)     — しきい値判定・画素数/x,y座標総和集計（相方ブランチ、未マージ）
+//   ├── frame_difference   — 前フレームとの絶対差分計算 + しきい値判定・画素数/
+//   │                        x,y座標総和集計 (count/sum_x/sum_y、CAM_PCLK ドメイン)
 //   ├── motion_cdc         — CAM_PCLK → clock50 クロックドメイン交差
 //   ├── bram_2port         — dual-port RAM 8-bit × 307200     (Quartus IP)
 //   │     port A: write ← frame_difference (CAM_PCLK)
@@ -141,26 +140,34 @@ wire [18:0] diff_addr;
 wire [7:0]  diff_data;
 wire        diff_we;
 
-// モーション統計（相方ブランチの motion_stats、CAM_PCLK ドメイン）
-// TODO: 相方ブランチをマージしたら、下記 motion_stats_stub の instantiate を
-//       motion_stats の実インスタンス化に置き換える。信号仕様は同一
-//       （motion_count[16:0] / motion_sum_x[24:0] / motion_sum_y[24:0]、
-//       いずれも CAM_PCLK ドメイン + motion_frame_done）なのでポート接続はそのまま流用可。
-wire [16:0] motion_count;
-wire [24:0] motion_sum_x;
-wire [24:0] motion_sum_y;
-wire        motion_frame_done;
+// モーション統計（frame_difference が算出する画素数/座標総和、CAM_PCLK ドメイン）
+// frame_difference は f_dist（ダブルバッファのフェーズ、1フレームごとにトグル）と
+// 同じタイミングで count/sum_x/sum_y を確定させるので、f_dist のトグルエッジを
+// 検出して motion_frame_done パルスを作る。frame_difference 側は count/sum_x/sum_y
+// とも32bit幅で出力するため、ここで motion_count/sum_x/sum_y の実幅
+// （17bit/25bit/25bit、motion_avalon_slave のレジスタ幅に合わせたもの）へ切り詰める。
+wire [31:0] diff_count;
+wire [31:0] diff_sum_x;
+wire [31:0] diff_sum_y;
+wire        f_dist_w; // frame_difference の書き込み先バンク（0/1）、自己フィードバック
 
-motion_stats_stub u_motion_stats_stub (
-    .clock              (CAM_PCLK),
-    .reset              (reset),
-    .CAM_VSYNC          (CAM_VSYNC),
+wire [16:0] motion_count = diff_count[16:0];
+wire [24:0] motion_sum_x = diff_sum_x[24:0];
+wire [24:0] motion_sum_y = diff_sum_y[24:0];
 
-    .motion_count       (motion_count),
-    .motion_sum_x       (motion_sum_x),
-    .motion_sum_y       (motion_sum_y),
-    .motion_frame_done  (motion_frame_done)
-);
+reg  f_dist_d;
+always @(posedge CAM_PCLK) begin
+    if (reset)
+        f_dist_d <= 1'b0;
+    else
+        f_dist_d <= f_dist_w;
+end
+wire f_dist_edge = (f_dist_w != f_dist_d);
+
+// count がこのしきい値を超えたフレームだけ HPS に通知する（ノイズ的な微小変化を除外）。
+// 必要に応じてこの値を調整すること。
+localparam [16:0] MOTION_COUNT_THRESHOLD = 17'd1000;
+wire motion_frame_done = f_dist_edge && (motion_count > MOTION_COUNT_THRESHOLD);
 
 // motion_cdc 出力（clock50 ドメイン）
 wire [16:0] motion_count_50;
@@ -233,13 +240,22 @@ frame_difference u_frame_difference (
     .clock        (CAM_PCLK),
     .reset        (reset),
 
+    .mode         (1'b1), // 1: 通常の絶対差分表示（0だと反転表示 255-abs_diff）
+
     .current_addr (bram_addr_a),
     .current_data (bram_wdata_a),
     .current_we   (bram_we_a),
 
     .diff_addr    (diff_addr),
     .diff_data    (diff_data),
-    .diff_we      (diff_we)
+    .diff_we      (diff_we),
+
+    .count        (diff_count),
+    .sum_x        (diff_sum_x),
+    .sum_y        (diff_sum_y),
+
+    .f_dist       (f_dist_w),
+    .write_phase  (f_dist_w) // ダブルバッファのフェーズを自己フィードバック
 );
 
 // ---- BRAM（デュアルポート）-----------------------------------------
@@ -286,9 +302,8 @@ adv7513 adv7513 (
 );
 
 // ---- モーション検出 → HPS 送信 --------------------------------------
-// CAM_PCLK ドメインの motion_count/sum_x/sum_y/frame_done（相方ブランチの
-// motion_stats が生成、現状はタイオフ）を clock50 ドメインへ CDC し、
-// HPS 向け Avalon-MM スレーブとして公開する。
+// CAM_PCLK ドメインの motion_count/sum_x/sum_y/frame_done（frame_difference が算出）を
+// clock50 ドメインへ CDC し、HPS 向け Avalon-MM スレーブとして公開する。
 
 motion_cdc u_motion_cdc (
     .clock_src              (CAM_PCLK),

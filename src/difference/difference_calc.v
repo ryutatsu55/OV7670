@@ -19,8 +19,9 @@ module difference_calc(
   output reg  [7:0]  diff_data,
   output reg         diff_we,
 
-  output reg [31:0] center_x, 
-  output reg [31:0] center_y, // 重心座標
+  output reg [31:0] count, // しきい値超過画素数（フレーム確定値）
+  output reg [31:0] sum_x,
+  output reg [31:0] sum_y, // しきい値超過画素の x/y 座標総和（フレーム確定値、HPS 側で count と合わせて重心を算出する）
 
   output reg f_dist, // 0: frame0 , 1: frame1
   input write_phase
@@ -73,8 +74,9 @@ always @(posedge clock) begin
     Sx       <= 32'd0;
     Sy       <= 32'd0;
     S        <= 32'd0;
-    center_x <= 32'd0;
-    center_y <= 32'd0;
+    count    <= 32'd0;
+    sum_x    <= 32'd0;
+    sum_y    <= 32'd0;
   end else begin
     // 前フレームRAMへ読み出し要求
     prev_rd_addr <= current_addr;
@@ -129,15 +131,12 @@ always @(posedge clock) begin
 
     end
 
-    //重心の算出
+    // フレーム末尾で count/sum_x/sum_y を確定させ、次フレーム用にリセット
+    // （重心の算出は HPS 側で count による除算として行う）
     if (current_we_d2 && current_addr_d2 == 19'd76799) begin
-      if (S != 0) begin
-        center_x <= Sx / S;
-        center_y <= Sy / S;
-      end else begin
-        center_x <= 0;
-        center_y <= 0;
-      end
+      count <= S;
+      sum_x <= Sx;
+      sum_y <= Sy;
 
       Sx <= 0;
       Sy <= 0;

@@ -53,7 +53,7 @@ set_global_assignment -name EDA_OUTPUT_DATA_FORMAT "VERILOG HDL" -section_id eda
 set_global_assignment -name POWER_PRESET_COOLING_SOLUTION "23 MM HEAT SINK WITH 200 LFPM AIRFLOW"
 set_global_assignment -name POWER_BOARD_THERMAL_MODEL "NONE (CONSERVATIVE)"
 set_global_assignment -name TIMING_ANALYZER_MULTICORNER_ANALYSIS ON
-set_global_assignment -name NUM_PARALLEL_PROCESSORS 1
+set_global_assignment -name NUM_PARALLEL_PROCESSORS ALL
 set_location_assignment PIN_V11 -to clock50
 set_location_assignment PIN_AH17 -to reset_n
 set_location_assignment PIN_AF11 -to HDMI_TX_INT
