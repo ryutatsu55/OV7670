@@ -2,6 +2,7 @@
 `include "camera/camera.v"
 `include "difference/difference.v"
 `include "hps_if/motion_cdc.v"
+`include "hps_if/motion_stats_stub.v"
 
 // Top-level module.
 // IP cores (pll_25, pll_5, bram_2port, soc_system) are added via their .qip files。
@@ -141,19 +142,25 @@ wire [7:0]  diff_data;
 wire        diff_we;
 
 // モーション統計（相方ブランチの motion_stats、CAM_PCLK ドメイン）
-// TODO: 相方ブランチをマージしたら motion_stats を実インスタンス化し、
-//       下記のタイオフ代入 (assign motion_* = ...) を削除して置き換える。
-//       期待する信号仕様: motion_count[16:0] / motion_sum_x[24:0] / motion_sum_y[24:0]
-//       （いずれも CAM_PCLK ドメイン）+ motion_frame_done（フレーム確定を示す1サイクルパルス）。
+// TODO: 相方ブランチをマージしたら、下記 motion_stats_stub の instantiate を
+//       motion_stats の実インスタンス化に置き換える。信号仕様は同一
+//       （motion_count[16:0] / motion_sum_x[24:0] / motion_sum_y[24:0]、
+//       いずれも CAM_PCLK ドメイン + motion_frame_done）なのでポート接続はそのまま流用可。
 wire [16:0] motion_count;
 wire [24:0] motion_sum_x;
 wire [24:0] motion_sum_y;
 wire        motion_frame_done;
 
-assign motion_count       = 17'd0;
-assign motion_sum_x       = 25'd0;
-assign motion_sum_y       = 25'd0;
-assign motion_frame_done  = 1'b0;
+motion_stats_stub u_motion_stats_stub (
+    .clock              (CAM_PCLK),
+    .reset              (reset),
+    .CAM_VSYNC          (CAM_VSYNC),
+
+    .motion_count       (motion_count),
+    .motion_sum_x       (motion_sum_x),
+    .motion_sum_y       (motion_sum_y),
+    .motion_frame_done  (motion_frame_done)
+);
 
 // motion_cdc 出力（clock50 ドメイン）
 wire [16:0] motion_count_50;

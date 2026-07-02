@@ -1,5 +1,5 @@
-//`include "difference_calc.v"
-//`include "prev_data_ram.v"
+`include "difference_calc.v"
+`include "prev_data_ram.v"
 
 module frame_difference(
 
