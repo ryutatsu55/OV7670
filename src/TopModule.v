@@ -166,7 +166,7 @@ wire f_dist_edge = (f_dist_w != f_dist_d);
 
 // count がこのしきい値を超えたフレームだけ HPS に通知する（ノイズ的な微小変化を除外）。
 // 必要に応じてこの値を調整すること。
-localparam [16:0] MOTION_COUNT_THRESHOLD = 17'd1000;
+localparam [16:0] MOTION_COUNT_THRESHOLD = 17'd5000;
 wire motion_frame_done = f_dist_edge && (motion_count > MOTION_COUNT_THRESHOLD);
 
 // motion_cdc 出力（clock50 ドメイン）
