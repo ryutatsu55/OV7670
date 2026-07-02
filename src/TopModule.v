@@ -29,6 +29,9 @@ module TopModule (
     input  wire        reset_n,
     input  wire        switchR, switchG, switchB,
 
+    input  wire        mode, // 0:黒地 1:白地
+    input  wire     mode2,
+
     // AUDIO (unused)
     output wire        HDMI_I2S0,
     output wire        HDMI_MCLK,
@@ -239,9 +242,8 @@ camera u_camera (
 frame_difference u_frame_difference (
     .clock        (CAM_PCLK),
     .reset        (reset),
-
-    .mode         (1'b1), // 1: 通常の絶対差分表示（0だと反転表示 255-abs_diff）
-
+    .mode         (mode),
+    .mode2        (mode2),
     .current_addr (bram_addr_a),
     .current_data (bram_wdata_a),
     .current_we   (bram_we_a),
