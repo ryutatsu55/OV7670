@@ -134,6 +134,8 @@ always @(posedge clock) begin
 
     end
 
+    //変更テスト
+
     //重心の算出
     if (current_we_d2 && current_addr_d2 == 19'd76799) begin
       if (S != 0) begin
