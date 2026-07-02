@@ -58,8 +58,6 @@ set_location_assignment PIN_V11 -to clock50
 set_location_assignment PIN_AH17 -to reset_n
 set_location_assignment PIN_AF11 -to HDMI_TX_INT
 set_location_assignment PIN_W15 -to READY
-set_location_assignment PIN_Y24 -to switchR
-set_location_assignment PIN_W24 -to switchG
 set_location_assignment PIN_AD12 -to HDMI_TX_D[0]
 set_location_assignment PIN_W8 -to HDMI_TX_D[2]
 set_location_assignment PIN_Y8 -to HDMI_TX_D[3]

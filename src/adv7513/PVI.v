@@ -6,7 +6,6 @@
 
 module PVI(
   input  clock, clock50, reset,
-  input  switchR, switchG, switchB,
 
   output reg  hsync, vsync,
   output reg  dataEnable,

@@ -121,7 +121,6 @@ addr = V × 320 + H     (H: 0..319, V: 0..239)
 |--------|------|------|
 | `clock50` | input | 50 MHz システムクロック |
 | `reset_n` | input | アクティブ Low リセット |
-| `switchR/G/B` | input | カラーチャンネル選択スイッチ（adv7513 に渡す） |
 | `HDMI_TX_D[23:0]` | output | HDMI RGB データ |
 | `HDMI_TX_VS/HS/DE` | output | HDMI 同期信号 |
 | `HDMI_TX_CLK` | output | HDMI ピクセルクロック |

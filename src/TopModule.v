@@ -27,7 +27,6 @@
 module TopModule (
     input  wire        clock50,
     input  wire        reset_n,
-    input  wire        switchR, switchG, switchB,
 
     input  wire        mode, // 0:黒地 1:白地
     input  wire     mode2,
@@ -283,9 +282,6 @@ adv7513 adv7513 (
     .reset_n      (reset_n),
     .clock25      (clock25),
     .locked       (locked),
-    .switchR      (switchR),
-    .switchG      (switchG),
-    .switchB      (switchB),
     .HDMI_I2S0    (HDMI_I2S0),
     .HDMI_MCLK    (HDMI_MCLK),
     .HDMI_LRCLK   (HDMI_LRCLK),

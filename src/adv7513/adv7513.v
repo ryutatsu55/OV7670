@@ -8,7 +8,6 @@ module adv7513(
   input  clock50, reset_n,
   input  clock25,
   input  locked,
-  input  switchR, switchG, switchB,
 
   // AUDIO (unused)
   output HDMI_I2S0,
@@ -43,9 +42,6 @@ PVI PVI (
   .clock      (clock25),
   .clock50    (clock50),
   .reset      (~locked),
-  .switchR    (switchR),
-  .switchG    (switchG),
-  .switchB    (switchB),
   .hsync      (HDMI_TX_HS),
   .vsync      (HDMI_TX_VS),
   .dataEnable (HDMI_TX_DE),
