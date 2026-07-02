@@ -30,8 +30,25 @@ module adv7513(
 
   // BRAM port B (read side — driven by PVI pixel counters)
   output [18:0] bram_addr,
-  input  [7:0]  bram_rdata
+  input  [7:0]  bram_rdata,
+
+  input f_dist, // 0: frame0 , 1: frame1
+
+  output reg display_phase,
+
+  input framedone
 );
+
+wire frame_done;
+
+
+always @(posedge clock25 or negedge reset_n) begin
+  if (!reset_n) begin
+    display_phase <= 1'b0;
+  end else if (frame_done) begin
+    display_phase <= ~display_phase;
+  end
+end
 
 assign HDMI_I2S0  = 1'bz;
 assign HDMI_MCLK  = 1'bz;
@@ -42,13 +59,19 @@ PVI PVI (
   .clock      (clock25),
   .clock50    (clock50),
   .reset      (~locked),
+  .display_phase(display_phase),
+  .frame_done(frame_done),
+  .switchR    (switchR),
+  .switchG    (switchG),
+  .switchB    (switchB),
   .hsync      (HDMI_TX_HS),
   .vsync      (HDMI_TX_VS),
   .dataEnable (HDMI_TX_DE),
   .vgaClock   (HDMI_TX_CLK),
   .RGBchannel (HDMI_TX_D),
   .bram_addr  (bram_addr),
-  .bram_rdata (bram_rdata)
+  .bram_rdata (bram_rdata),
+  .frame_done(frame_done)
 );
 
 I2C_HDMI_Config #(

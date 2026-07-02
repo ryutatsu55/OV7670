@@ -7,6 +7,8 @@
 module PVI(
   input  clock, clock50, reset,
 
+  input  display_phase,
+
   output reg  hsync, vsync,
   output reg  dataEnable,
   output reg  vgaClock,
@@ -14,10 +16,20 @@ module PVI(
 
   // BRAM port B interface
   output [18:0] bram_addr,  // read address presented to BRAM each cycle
-  input  [7:0]  bram_rdata  // 8-bit grayscale pixel data from BRAM (unregistered output)
+  input  [7:0]  bram_rdata,  // 8-bit grayscale pixel data from BRAM (unregistered output)
+
+  output frame_done,
+
 );
 
+assign frame_done = (pixelH == H_TOTAL - 1) && (pixelV == V_TOTAL - 1);
+
 reg [9:0] pixelH, pixelV;
+//reg [18:0] offset; // 0 or 76800, depending on which frame is being read
+
+//localparam BASE = 18'd76800; // 320*240 = 76800
+reg phase; // 0: frame0 , 1: frame1
+wire [18:0] offset = display_phase ? 19'd76800 : 19'd0;
 
 parameter H_ACTIVE = 640;
 parameter H_FP     = 16;
@@ -34,13 +46,24 @@ always @(posedge clock or posedge reset) begin
   if (reset) begin
     pixelH <= 0;
     pixelV <= 0;
+  phase  <= 0;
+  //offset <= 19'd0;
   end 
   else begin
     if (pixelH == H_TOTAL - 1) begin
       pixelH <= 0;
-      pixelV <= (pixelV == V_TOTAL - 1) ? 0 : pixelV + 1;
-    end 
-    else begin
+
+      if (pixelV == V_TOTAL - 1 ) begin
+        pixelV <= 0;
+        if(framedone == 1'b1)begin
+          phase  <= ~phase;
+        end
+
+        //offset = display_phase ? 19'd76800 : 19'd0;
+      end else begin
+        pixelV <= pixelV + 1;
+      end
+    end else begin
       pixelH <= pixelH + 1;
     end
   end
@@ -51,7 +74,12 @@ end
 //    addr = qvga_v * 320 + qvga_h = (qvga_v << 8) + (qvga_v << 6) + qvga_h
 wire [8:0] qvga_h = pixelH[9:1];   // pixelH / 2 → 0..319
 wire [7:0] qvga_v = pixelV[8:1];   // pixelV / 2 → 0..239
-assign bram_addr = ({11'b0, qvga_v} << 8) + ({11'b0, qvga_v} << 6) + {10'b0, qvga_h};
+
+//TODO: offsetは0だったり76800だったりする
+assign bram_addr = offset + ({11'b0, qvga_v} << 8) + ({11'b0, qvga_v} << 6) + {10'b0, qvga_h};
+
+
+//assign bram_addr = BASE + ({11'b0, qvga_v} << 8) + ({11'b0, qvga_v} << 6) + {10'b0, qvga_h};
 
 // 3. Sync / DE pipeline — 1 stage.
 //    BRAM output is UNREGISTERED (combinational after address register), so it

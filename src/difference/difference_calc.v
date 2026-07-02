@@ -4,6 +4,7 @@ module difference_calc(
   
   input wire mode,
   input wire mode2,
+  input wire mode2,
 
   input  wire [18:0] current_addr,
   input  wire [7:0]  current_data,
@@ -25,7 +26,9 @@ module difference_calc(
   output reg [31:0] sum_y, // しきい値超過画素の x/y 座標総和（フレーム確定値、HPS 側で count と合わせて重心を算出する）
 
   output reg f_dist, // 0: frame0 , 1: frame1
-  input write_phase
+  input write_phase,
+
+  output reg framedone
 );
 
 
@@ -53,7 +56,7 @@ wire [7:0] diff_pixel =
     (output_switch == 2'b01) ? abs_diff :            // 白地
                                current_data_d2;       // output_switch==2'b10：何も加工しない
 
-
+reg framedone;
 
 always @(posedge clock) begin
   if (reset) begin
@@ -104,7 +107,10 @@ always @(posedge clock) begin
     end
 
     if (current_we_d2 && current_addr_d2 == 19'd76799) begin
-      f_dist <= ~f_dist;
+      //★ f_dist <= ~f_dist;
+      framedone <= 1'b1;
+    end else begin
+      framedone <= 1'b0;
     end
 
     diff_we   <= current_we_d2;

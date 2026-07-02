@@ -238,9 +238,38 @@ camera u_camera (
     .pclk_active (CAM_PCLK_ACT)
 );
 
+wire [31:0] center_x, center_y;
+
+
+wire f_dist;
+wire display_phase;
+reg display_phase_cam_d1;
+reg display_phase_cam_d2;
+
+wire write_phase;
+assign write_phase = ~display_phase;
+
+always @(posedge CAM_PCLK or posedge reset) begin
+  if (reset) begin
+    display_phase_cam_d1 <= 1'b0;
+    display_phase_cam_d2 <= 1'b0;
+  end else begin
+    display_phase_cam_d1 <= display_phase;
+    display_phase_cam_d2 <= display_phase_cam_d1;
+  end
+end
+
+//wire write_phase = ~display_phase_cam_d2;
+
+//wire write_phase;
+
+//assign write_phase = ~f_dist;
+
 frame_difference u_frame_difference (
     .clock        (CAM_PCLK),
     .reset        (reset),
+    .mode         (mode),
+    .mode2        (mode2),
     .mode         (mode),
     .mode2        (mode2),
     .current_addr (bram_addr_a),
@@ -251,12 +280,12 @@ frame_difference u_frame_difference (
     .diff_data    (diff_data),
     .diff_we      (diff_we),
 
-    .count        (diff_count),
-    .sum_x        (diff_sum_x),
-    .sum_y        (diff_sum_y),
+    .center_x     (center_x),
+    .center_y     (center_y),
 
-    .f_dist       (f_dist_w),
-    .write_phase  (f_dist_w) // ダブルバッファのフェーズを自己フィードバック
+    .f_dist       (f_dist),
+    .write_phase (write_phase),
+    .framedone(framedone)
 );
 
 // ---- BRAM（デュアルポート）-----------------------------------------
@@ -296,7 +325,139 @@ adv7513 adv7513 (
     .HDMI_I2C_SCL (HDMI_I2C_SCL),
     .READY        (READY),
     .bram_addr    (bram_addr_b),
-    .bram_rdata   (bram_rdata_b)
+    .bram_rdata   (bram_rdata_b),
+    .f_dist       (f_dist),
+.display_phase(display_phase)
+);
+
+// ---- モーション検出 → HPS 送信 --------------------------------------
+// CAM_PCLK ドメインの motion_count/sum_x/sum_y/frame_done（frame_difference が算出）を
+// clock50 ドメインへ CDC し、HPS 向け Avalon-MM スレーブとして公開する。
+
+motion_cdc u_motion_cdc (
+    .clock_src              (CAM_PCLK),
+    .reset_src              (reset),
+
+    .motion_count_src       (motion_count),
+    .motion_sum_x_src       (motion_sum_x),
+    .motion_sum_y_src       (motion_sum_y),
+    .motion_frame_done_src  (motion_frame_done),
+
+    .clock_dst              (clock50),
+    .reset_dst              (reset),
+
+    .motion_count_dst       (motion_count_50),
+    .motion_sum_x_dst       (motion_sum_x_50),
+    .motion_sum_y_dst       (motion_sum_y_50),
+    .new_data_pulse_dst     (motion_new_data_50)
+);
+
+// ---- HPS サブシステム（Platform Designer 生成、soc_system.qip）------
+// motion_avalon_slave はこの内部に含まれている。button_pio/dipsw_pio/led_pio は
+// DE10-Nano GHRD 由来のデモ用ペリフェラルで、今回は実ピンに接続せず無効値に固定。
+// f2h_cold/warm/debug_reset_req・stm_hw_events も同様に未使用のため無効値に固定。
+soc_system u_soc_system (
+    .clk_clk                                (clock50),
+    .reset_reset_n                          (hps_fpga_reset_n),
+
+    // モーションデータ（motion_cdc → soc_system 内部の motion_avalon_slave）
+    .motion_data_export                     (motion_count_50),
+    .motion_data_motion_sum_x_in            (motion_sum_x_50),
+    .motion_data_motion_sum_y_in            (motion_sum_y_50),
+    .motion_data_new_data_pulse_in          (motion_new_data_50),
+
+    // HPS リセット関連（GHRD と同じ自己フィードバック構成。詳細は上の
+    // hps_fpga_reset_n の宣言コメントを参照）
+    .hps_0_h2f_reset_reset_n                (hps_fpga_reset_n),
+    .hps_0_f2h_cold_reset_req_reset_n       (1'b1),
+    .hps_0_f2h_debug_reset_req_reset_n      (1'b1),
+    .hps_0_f2h_warm_reset_req_reset_n       (1'b1),
+    .hps_0_f2h_stm_hw_events_stm_hwevents   (28'd0),
+
+    // GHRD 由来のデモ周辺回路（未使用、無効値に固定）
+    .button_pio_external_connection_export  (2'b00),
+    .dipsw_pio_external_connection_export   (4'b0000),
+    .led_pio_external_connection_export     (),
+
+    // HPS DDR3
+    .memory_mem_a                           (HPS_DDR3_ADDR),
+    .memory_mem_ba                          (HPS_DDR3_BA),
+    .memory_mem_ck                          (HPS_DDR3_CK_P),
+    .memory_mem_ck_n                        (HPS_DDR3_CK_N),
+    .memory_mem_cke                         (HPS_DDR3_CKE),
+    .memory_mem_cs_n                        (HPS_DDR3_CS_N),
+    .memory_mem_ras_n                       (HPS_DDR3_RAS_N),
+    .memory_mem_cas_n                       (HPS_DDR3_CAS_N),
+    .memory_mem_we_n                        (HPS_DDR3_WE_N),
+    .memory_mem_reset_n                     (HPS_DDR3_RESET_N),
+    .memory_mem_dq                          (HPS_DDR3_DQ),
+    .memory_mem_dqs                         (HPS_DDR3_DQS_P),
+    .memory_mem_dqs_n                       (HPS_DDR3_DQS_N),
+    .memory_mem_odt                         (HPS_DDR3_ODT),
+    .memory_mem_dm                          (HPS_DDR3_DM),
+    .memory_oct_rzqin                       (HPS_DDR3_RZQ),
+
+    // HPS Ethernet (EMAC1)
+    .hps_0_hps_io_hps_io_emac1_inst_TX_CLK  (HPS_ENET_GTX_CLK),
+    .hps_0_hps_io_hps_io_emac1_inst_TXD0    (HPS_ENET_TX_DATA[0]),
+    .hps_0_hps_io_hps_io_emac1_inst_TXD1    (HPS_ENET_TX_DATA[1]),
+    .hps_0_hps_io_hps_io_emac1_inst_TXD2    (HPS_ENET_TX_DATA[2]),
+    .hps_0_hps_io_hps_io_emac1_inst_TXD3    (HPS_ENET_TX_DATA[3]),
+    .hps_0_hps_io_hps_io_emac1_inst_RXD0    (HPS_ENET_RX_DATA[0]),
+    .hps_0_hps_io_hps_io_emac1_inst_MDIO    (HPS_ENET_MDIO),
+    .hps_0_hps_io_hps_io_emac1_inst_MDC     (HPS_ENET_MDC),
+    .hps_0_hps_io_hps_io_emac1_inst_RX_CTL  (HPS_ENET_RX_DV),
+    .hps_0_hps_io_hps_io_emac1_inst_TX_CTL  (HPS_ENET_TX_EN),
+    .hps_0_hps_io_hps_io_emac1_inst_RX_CLK  (HPS_ENET_RX_CLK),
+    .hps_0_hps_io_hps_io_emac1_inst_RXD1    (HPS_ENET_RX_DATA[1]),
+    .hps_0_hps_io_hps_io_emac1_inst_RXD2    (HPS_ENET_RX_DATA[2]),
+    .hps_0_hps_io_hps_io_emac1_inst_RXD3    (HPS_ENET_RX_DATA[3]),
+
+    // HPS SD/MMC
+    .hps_0_hps_io_hps_io_sdio_inst_CMD      (HPS_SD_CMD),
+    .hps_0_hps_io_hps_io_sdio_inst_D0       (HPS_SD_DATA[0]),
+    .hps_0_hps_io_hps_io_sdio_inst_D1       (HPS_SD_DATA[1]),
+    .hps_0_hps_io_hps_io_sdio_inst_CLK      (HPS_SD_CLK),
+    .hps_0_hps_io_hps_io_sdio_inst_D2       (HPS_SD_DATA[2]),
+    .hps_0_hps_io_hps_io_sdio_inst_D3       (HPS_SD_DATA[3]),
+
+    // HPS USB
+    .hps_0_hps_io_hps_io_usb1_inst_D0       (HPS_USB_DATA[0]),
+    .hps_0_hps_io_hps_io_usb1_inst_D1       (HPS_USB_DATA[1]),
+    .hps_0_hps_io_hps_io_usb1_inst_D2       (HPS_USB_DATA[2]),
+    .hps_0_hps_io_hps_io_usb1_inst_D3       (HPS_USB_DATA[3]),
+    .hps_0_hps_io_hps_io_usb1_inst_D4       (HPS_USB_DATA[4]),
+    .hps_0_hps_io_hps_io_usb1_inst_D5       (HPS_USB_DATA[5]),
+    .hps_0_hps_io_hps_io_usb1_inst_D6       (HPS_USB_DATA[6]),
+    .hps_0_hps_io_hps_io_usb1_inst_D7       (HPS_USB_DATA[7]),
+    .hps_0_hps_io_hps_io_usb1_inst_CLK      (HPS_USB_CLKOUT),
+    .hps_0_hps_io_hps_io_usb1_inst_STP      (HPS_USB_STP),
+    .hps_0_hps_io_hps_io_usb1_inst_DIR      (HPS_USB_DIR),
+    .hps_0_hps_io_hps_io_usb1_inst_NXT      (HPS_USB_NXT),
+
+    // HPS SPI Master
+    .hps_0_hps_io_hps_io_spim1_inst_CLK     (HPS_SPIM_CLK),
+    .hps_0_hps_io_hps_io_spim1_inst_MOSI    (HPS_SPIM_MOSI),
+    .hps_0_hps_io_hps_io_spim1_inst_MISO    (HPS_SPIM_MISO),
+    .hps_0_hps_io_hps_io_spim1_inst_SS0     (HPS_SPIM_SS),
+
+    // HPS UART
+    .hps_0_hps_io_hps_io_uart0_inst_RX      (HPS_UART_RX),
+    .hps_0_hps_io_hps_io_uart0_inst_TX      (HPS_UART_TX),
+
+    // HPS I2C
+    .hps_0_hps_io_hps_io_i2c0_inst_SDA      (HPS_I2C0_SDAT),
+    .hps_0_hps_io_hps_io_i2c0_inst_SCL      (HPS_I2C0_SCLK),
+    .hps_0_hps_io_hps_io_i2c1_inst_SDA      (HPS_I2C1_SDAT),
+    .hps_0_hps_io_hps_io_i2c1_inst_SCL      (HPS_I2C1_SCLK),
+
+    // HPS 個別 GPIO（loan I/O、ボード固有配線）
+    .hps_0_hps_io_hps_io_gpio_inst_GPIO09   (HPS_CONV_USB_N),
+    .hps_0_hps_io_hps_io_gpio_inst_GPIO35   (HPS_ENET_INT_N),
+    .hps_0_hps_io_hps_io_gpio_inst_GPIO40   (HPS_LTC_GPIO),
+    .hps_0_hps_io_hps_io_gpio_inst_GPIO53   (HPS_LED),
+    .hps_0_hps_io_hps_io_gpio_inst_GPIO54   (HPS_KEY),
+    .hps_0_hps_io_hps_io_gpio_inst_GPIO61   (HPS_GSENSOR_INT)
 );
 
 // ---- モーション検出 → HPS 送信 --------------------------------------
