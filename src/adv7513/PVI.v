@@ -19,7 +19,8 @@ module PVI(
   output [18:0] bram_addr,  // read address presented to BRAM each cycle
   input  [7:0]  bram_rdata,  // 8-bit grayscale pixel data from BRAM (unregistered output)
 
-  output frame_done
+  output frame_done,
+
 );
 
 assign frame_done = (pixelH == H_TOTAL - 1) && (pixelV == V_TOTAL - 1);
@@ -53,9 +54,12 @@ always @(posedge clock or posedge reset) begin
     if (pixelH == H_TOTAL - 1) begin
       pixelH <= 0;
 
-      if (pixelV == V_TOTAL - 1) begin
+      if (pixelV == V_TOTAL - 1 ) begin
         pixelV <= 0;
-        phase  <= ~phase;
+        if(framedone == 1'b1)begin
+          phase  <= ~phase;
+        end
+
         //offset = display_phase ? 19'd76800 : 19'd0;
       end else begin
         pixelV <= pixelV + 1;

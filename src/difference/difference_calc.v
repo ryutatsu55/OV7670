@@ -24,7 +24,9 @@ module difference_calc(
   output reg [31:0] center_y, // 重心座標
 
   output reg f_dist, // 0: frame0 , 1: frame1
-  input write_phase
+  input write_phase,
+
+  output reg framedone
 );
 
 
@@ -52,7 +54,7 @@ wire [7:0] diff_pixel =
     (output_switch == 2'b01) ? abs_diff :            // 白地
                                current_data_d2;       // output_switch==2'b10：何も加工しない
 
-
+reg framedone;
 
 always @(posedge clock) begin
   if (reset) begin
@@ -102,7 +104,10 @@ always @(posedge clock) begin
     end
 
     if (current_we_d2 && current_addr_d2 == 19'd76799) begin
-      f_dist <= ~f_dist;
+      //★ f_dist <= ~f_dist;
+      framedone <= 1'b1;
+    end else begin
+      framedone <= 1'b0;
     end
 
     diff_we   <= current_we_d2;
@@ -133,8 +138,6 @@ always @(posedge clock) begin
       // 特に何もしない
 
     end
-
-    //変更テスト
 
     //重心の算出
     if (current_we_d2 && current_addr_d2 == 19'd76799) begin

@@ -125,7 +125,7 @@ reg display_phase_cam_d1;
 reg display_phase_cam_d2;
 
 wire write_phase;
-assign write_phase = ~f_dist;
+assign write_phase = ~display_phase;
 
 always @(posedge CAM_PCLK or posedge reset) begin
   if (reset) begin
@@ -160,7 +160,8 @@ frame_difference u_frame_difference (
     .center_y     (center_y),
 
     .f_dist       (f_dist),
-    .write_phase (write_phase)
+    .write_phase (write_phase),
+    .framedone(framedone)
 );
 
 // ---- BRAM（デュアルポート）-----------------------------------------

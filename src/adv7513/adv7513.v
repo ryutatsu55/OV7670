@@ -35,7 +35,9 @@ module adv7513(
 
   input f_dist, // 0: frame0 , 1: frame1
 
-  output reg display_phase
+  output reg display_phase,
+
+  input framedone
 );
 
 wire frame_done;
@@ -69,7 +71,8 @@ PVI PVI (
   .vgaClock   (HDMI_TX_CLK),
   .RGBchannel (HDMI_TX_D),
   .bram_addr  (bram_addr),
-  .bram_rdata (bram_rdata)
+  .bram_rdata (bram_rdata),
+  .frame_done(frame_done)
 );
 
 I2C_HDMI_Config #(
