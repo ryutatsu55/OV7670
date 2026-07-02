@@ -35,3 +35,18 @@ pll_5.xml
 
 # Project instructions (local only)
 CLAUDE.md
+
+# Platform Designer editor cache/scratch state (regenerated on every open)
+.qsys_edit/
+
+# HPS Fitter/Assembler outputs (regenerated on every compile, like output_files/)
+hps_isw_handoff/
+hps_sdram_p0_summary.csv
+
+# Platform Designer board-preset reference data (copied from Terasic GHRD,
+# used only by the pin-mux preset picker UI, not required to build)
+hps_common_board_info.xml
+soc_system_board_info.xml
+
+# Component Editor backup file
+*_hw.tcl~
