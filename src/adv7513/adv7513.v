@@ -61,17 +61,17 @@ PVI PVI (
   .reset      (~locked),
   .display_phase(display_phase),
   .frame_done(frame_done),
-  .switchR    (switchR),
-  .switchG    (switchG),
-  .switchB    (switchB),
+  // ★マージ整理: switchR/switchG/switchB は以前のセッションで未使用のため撤去済みだったが、
+  // 相方ブランチのマージで復活していた。PVI.v 側にも該当ポートが無く、adv7513.v にも
+  // 未宣言の識別子だったため削除（構文エラー回避）。
   .hsync      (HDMI_TX_HS),
   .vsync      (HDMI_TX_VS),
   .dataEnable (HDMI_TX_DE),
   .vgaClock   (HDMI_TX_CLK),
   .RGBchannel (HDMI_TX_D),
   .bram_addr  (bram_addr),
-  .bram_rdata (bram_rdata),
-  .frame_done(frame_done)
+  .bram_rdata (bram_rdata)
+  // ★マージ整理: .frame_done(frame_done) がここと上の行の2箇所で重複接続されていたため1つに整理
 );
 
 I2C_HDMI_Config #(

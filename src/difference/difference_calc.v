@@ -3,8 +3,7 @@ module difference_calc(
   input  wire        reset,
   
   input wire mode,
-  input wire mode2,
-  input wire mode2,
+  input wire mode2, // マージ時に二重宣言になっていたので1つに整理
 
   input  wire [18:0] current_addr,
   input  wire [7:0]  current_data,
@@ -56,7 +55,8 @@ wire [7:0] diff_pixel =
     (output_switch == 2'b01) ? abs_diff :            // 白地
                                current_data_d2;       // output_switch==2'b10：何も加工しない
 
-reg framedone;
+// ★マージ整理: framedone はポート宣言（output reg framedone）ですでに reg として
+// 宣言済みのため、ここでの重複した reg framedone; 宣言（二重宣言エラー）を削除。
 
 always @(posedge clock) begin
   if (reset) begin

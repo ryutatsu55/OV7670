@@ -7,8 +7,7 @@ module frame_difference(
     input  wire        reset,
 
     input wire mode,
-    input wire mode2,
-    input wire mode2,
+    input wire mode2, // マージ時に二重宣言になっていたので1つに整理
 
     input  wire [18:0] current_addr,
     input  wire [7:0]  current_data,

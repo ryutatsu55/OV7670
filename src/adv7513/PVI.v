@@ -18,7 +18,7 @@ module PVI(
   output [18:0] bram_addr,  // read address presented to BRAM each cycle
   input  [7:0]  bram_rdata,  // 8-bit grayscale pixel data from BRAM (unregistered output)
 
-  output frame_done,
+  output frame_done
 
 );
 
@@ -28,7 +28,6 @@ reg [9:0] pixelH, pixelV;
 //reg [18:0] offset; // 0 or 76800, depending on which frame is being read
 
 //localparam BASE = 18'd76800; // 320*240 = 76800
-reg phase; // 0: frame0 , 1: frame1
 wire [18:0] offset = display_phase ? 19'd76800 : 19'd0;
 
 parameter H_ACTIVE = 640;
@@ -46,18 +45,17 @@ always @(posedge clock or posedge reset) begin
   if (reset) begin
     pixelH <= 0;
     pixelV <= 0;
-  phase  <= 0;
   //offset <= 19'd0;
-  end 
+  end
   else begin
     if (pixelH == H_TOTAL - 1) begin
       pixelH <= 0;
 
       if (pixelV == V_TOTAL - 1 ) begin
         pixelV <= 0;
-        if(framedone == 1'b1)begin
-          phase  <= ~phase;
-        end
+        // ★マージ整理: 未宣言の framedone を参照する phase トグルは削除。
+        // 読み出し側のバッファ切替は display_phase (adv7513.v が frame_done を見て切り替える)
+        // 一本で行っており、この phase レジスタは元々どこにも使われていなかった重複ロジック。
 
         //offset = display_phase ? 19'd76800 : 19'd0;
       end else begin
