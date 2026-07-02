@@ -78,19 +78,17 @@ end
 
 assign irq = status_new_data;
 
-// ---- 読み出し ----
-always @(posedge clock) begin
-    if (reset) begin
-        avs_readdata <= 32'd0;
-    end else if (avs_read) begin
-        case (avs_address)
-            ADDR_STATUS: avs_readdata <= {31'd0, status_new_data};
-            ADDR_COUNT:  avs_readdata <= {15'd0, motion_count_reg};
-            ADDR_SUM_X:  avs_readdata <= {7'd0,  motion_sum_x_reg};
-            ADDR_SUM_Y:  avs_readdata <= {7'd0,  motion_sum_y_reg};
-            default:     avs_readdata <= 32'd0;
-        endcase
-    end
+// ---- 読み出し（0サイクルレイテンシ。avs_waitrequest 固定0との整合を取るため
+//      組み合わせ回路にする。クロック同期のレジスタ出力にすると1サイクル遅れが
+//      生じ、avs_waitrequest=0（0サイクルレイテンシ）の主張と矛盾してしまう）----
+always @(*) begin
+    case (avs_address)
+        ADDR_STATUS: avs_readdata = {31'd0, status_new_data};
+        ADDR_COUNT:  avs_readdata = {15'd0, motion_count_reg};
+        ADDR_SUM_X:  avs_readdata = {7'd0,  motion_sum_x_reg};
+        ADDR_SUM_Y:  avs_readdata = {7'd0,  motion_sum_y_reg};
+        default:     avs_readdata = 32'd0;
+    endcase
 end
 
 endmodule
